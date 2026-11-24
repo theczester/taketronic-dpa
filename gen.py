@@ -15,9 +15,9 @@ G = "http://base.google.com/ns/1.0"
 ET.register_namespace("g", G)
 S = 1200
 RED, GREEN, BLACK = (232, 25, 44), (0, 159, 66), (0, 0, 0)
-IMG_BOX = (60, 80, 1140, 875)        # x0, y0, x1, y1 obszar zdjęcia (wg Figmy)
-TITLE_Y, TITLE_MAX_W = 940, 1040     # środek pionowy tytułu (wg Figmy)
-PRICE_RIGHT, PRICE_BASE = 1141, 1145
+IMG_BOX = (60, 47, 1140, 842)        # x0, y0, x1, y1 obszar zdjęcia (zmierzone z Cropink)
+TITLE_BASE, TITLE_SIZE, TITLE_MAX_W = 957, 50, 1080   # linia bazowa tytułu (jak w Cropink)
+PRICE_RIGHT, PRICE_BASE, PRICE_SIZE = 1141, 1131, 89
 BAR_Y = 1160
 
 def font(sz): return ImageFont.truetype(FONT, sz)
@@ -38,7 +38,7 @@ def fmt_price(p):
     return f"{v:.2f}".replace(".", ",") + " zł"    # 1989,99 zł
 
 def fit_title(draw, text):
-    for sz in range(50, 33, -2):
+    for sz in range(TITLE_SIZE, 33, -2):
         f = font(sz)
         if draw.textlength(text, font=f) <= TITLE_MAX_W:
             return [text], f
@@ -58,11 +58,11 @@ def render(product_img, title, price):
     p = p.resize((max(1, round(p.width * sc)), max(1, round(p.height * sc))), Image.LANCZOS)
     can.paste(p, (IMG_BOX[0] + (bw - p.width) // 2, IMG_BOX[1] + (bh - p.height) // 2), p)
     lines, f = fit_title(d, title.upper())
-    lh = f.size * 1.2; y0 = TITLE_Y - lh * len(lines) / 2
+    lh = round(f.size * 1.2)
     for i, ln in enumerate(lines):
-        d.text((S / 2, y0 + i * lh + lh / 2), ln, font=f, fill=BLACK, anchor="mm")
+        d.text((S / 2, TITLE_BASE - (len(lines) - 1 - i) * lh), ln, font=f, fill=BLACK, anchor="ms")
     can.paste(LOGO, (60, 1055), LOGO)
-    pf = font(116)
+    pf = font(PRICE_SIZE)
     while d.textlength(price, font=pf) > 780: pf = font(pf.size - 4)
     d.text((PRICE_RIGHT, PRICE_BASE), price, font=pf, fill=RED, anchor="rs")
     d.rectangle((0, BAR_Y, S, S), fill=GREEN)
@@ -88,8 +88,8 @@ def main():
         try:
             raw = fetch(img)
             h = hashlib.md5((title + price).encode() + raw).hexdigest()[:8]
-            name = f"{pid}-{h}.jpg"
-            render(raw, title, price).save(os.path.join(OUT, "img", name), "JPEG", quality=90)
+            name = f"{pid}-{h}.png"
+            render(raw, title, price).save(os.path.join(OUT, "img", name), "PNG", compress_level=6)
             el = it.find(f"{{{G}}}image_link"); el.text = f"{BASE}/img/{name}"
             ok += 1
         except Exception as e:
