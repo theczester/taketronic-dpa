@@ -3,7 +3,7 @@ import hashlib, io, os, re, sys, shutil, urllib.request
 import xml.etree.ElementTree as ET
 from PIL import Image, ImageFont, ImageDraw
 
-SRC = os.environ.get("SOURCE_URL", "")          # feed z Apps Script (Bestsellers)
+SRC = os.environ.get("SELLY_FEED_URL", "")      # pełny feed Facebook z Selly (wszystkie produkty)
 BASE = os.environ.get("PUBLIC_BASE", "").rstrip("/")  # np. https://taketronic-dpa.pages.dev
 OUT = os.environ.get("OUT_DIR", "out")
 MIN_ITEMS = int(os.environ.get("MIN_ITEMS", "5"))
@@ -70,7 +70,7 @@ def render(product_img, title, price):
 
 def main():
     if not SRC or not BASE:
-        sys.exit("Brak SOURCE_URL albo PUBLIC_BASE")
+        sys.exit("Brak SELLY_FEED_URL albo PUBLIC_BASE")
     root = ET.fromstring(fetch(SRC))
     items = root.findall(".//item")
     if len(items) < MIN_ITEMS:
@@ -81,6 +81,9 @@ def main():
         g = lambda t: (it.findtext(f"{{{G}}}{t}") or "").strip()
         pid, title, img = g("id"), (g("title") or it.findtext("title") or ""), g("image_link")
         price = fmt_price(g("sale_price") or g("price"))
+        if not img or img.endswith("empty.jpg"):
+            print(f"[{pid}] brak zdjęcia w Selly, pomijam (zostaje w feedzie bez ramki)")
+            continue
         try:
             raw = fetch(img)
             h = hashlib.md5((title + price).encode() + raw).hexdigest()[:8]
