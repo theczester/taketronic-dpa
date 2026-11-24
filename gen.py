@@ -76,13 +76,14 @@ def main():
     if len(items) < MIN_ITEMS:
         sys.exit(f"Za mało produktów w źródle ({len(items)}), nie publikuję")
     shutil.rmtree(OUT, ignore_errors=True); os.makedirs(os.path.join(OUT, "img"))
-    ok = 0
+    ok = 0; drop = []
     for it in items:
         g = lambda t: (it.findtext(f"{{{G}}}{t}") or "").strip()
         pid, title, img = g("id"), (g("title") or it.findtext("title") or ""), g("image_link")
         price = fmt_price(g("sale_price") or g("price"))
         if not img or img.endswith("empty.jpg"):
-            print(f"[{pid}] brak zdjęcia w Selly, pomijam (zostaje w feedzie bez ramki)")
+            print(f"[{pid}] brak zdjęcia w Selly, usuwam z feedu")
+            drop.append(it)
             continue
         try:
             raw = fetch(img)
@@ -92,7 +93,11 @@ def main():
             el = it.find(f"{{{G}}}image_link"); el.text = f"{BASE}/img/{name}"
             ok += 1
         except Exception as e:
-            print(f"[{pid}] błąd grafiki, zostawiam oryginalne zdjęcie: {e}")
+            print(f"[{pid}] błąd grafiki, usuwam z feedu: {e}")
+            drop.append(it)
+    for ch in root.iter("channel"):
+        for it in drop:
+            if it in list(ch): ch.remove(it)
     ET.ElementTree(root).write(os.path.join(OUT, "feed.xml"), encoding="utf-8", xml_declaration=True)
     open(os.path.join(OUT, ".nojekyll"), "w").close()
     print(f"Gotowe: {ok}/{len(items)} grafik, feed: {BASE}/feed.xml")
