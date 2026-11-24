@@ -15,15 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: { name: github-pages, url: "${{ steps.deploy.outputs.page_url }}" }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/configure-pages@v5
+      - uses: actions/setup-python@v6
         with: { python-version: "3.12" }
       - run: pip install pillow==11.0.0
       - run: python gen.py
         env:
           SELLY_FEED_URL: ${{ secrets.SELLY_FEED_URL }}
           PUBLIC_BASE: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with: { path: out }
       - id: deploy
         uses: actions/deploy-pages@v4
